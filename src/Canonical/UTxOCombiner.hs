@@ -4,6 +4,7 @@ import Control.Monad
 import Cardano.Transaction
 import Data.Function
 import Data.Maybe
+import Control.Concurrent
 
 data Options = Options
   { oAddress :: String
@@ -12,6 +13,7 @@ data Options = Options
   , oTestnet :: Maybe Integer
   , oOneShot :: Bool
   , oSendToAddress :: Maybe String
+  , oWaitTime :: Int
   } deriving (Show, Eq)
 
 pOptions :: Parser Options
@@ -55,6 +57,12 @@ pOptions
           <> metavar "ADDRESS"
           )
         )
+  <*> option auto
+        ( long "wait"
+        <> short 'w'
+        <> metavar "WAIT_SECONDS"
+        <> value (45 * 60)
+        )
 
 parse :: IO Options
 parse = execParser $ info (pOptions <**> helper) mempty
@@ -75,7 +83,7 @@ run Options {..} = do
       sign oSigningKeyPath
 
     unless oOneShot $ do
-      replicateM_ 2 $ waitForNextBlock oTestnet
+      threadDelay $ 1_000_000 * oWaitTime
       next
 
 main :: IO ()
