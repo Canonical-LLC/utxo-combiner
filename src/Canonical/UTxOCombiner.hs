@@ -3,6 +3,7 @@ import Options.Applicative
 import Control.Monad
 import Cardano.Transaction
 import Data.Function
+import Data.Maybe
 
 data Options = Options
   { oAddress :: String
@@ -10,6 +11,7 @@ data Options = Options
   , oBatchCount :: Int
   , oTestnet :: Maybe Integer
   , oOneShot :: Bool
+  , oSendToAddress :: Maybe String
   } deriving (Show, Eq)
 
 pOptions :: Parser Options
@@ -47,12 +49,19 @@ pOptions
         (  long "one-shot"
         <> short 'o'
         )
+  <*> optional
+        ( strOption
+          ( long "output-address"
+          <> metavar "ADDRESS"
+          )
+        )
 
 parse :: IO Options
 parse = execParser $ info (pOptions <**> helper) mempty
 
 run :: Options -> IO ()
 run Options {..} = do
+  let senderAddress = fromMaybe oAddress oSendToAddress
   fix $ \next -> do
     utxos <- queryUtxos oAddress oTestnet
 
@@ -61,12 +70,12 @@ run Options {..} = do
         inputsToUse = take oBatchCount utxos
 
       forM_ inputsToUse input
-      void $ balanceNonAdaAssets oAddress
-      changeAddress oAddress
+      void $ balanceNonAdaAssets senderAddress
+      changeAddress senderAddress
       sign oSigningKeyPath
 
     unless oOneShot $ do
-      waitForNextBlock oTestnet
+      replicateM_ 2 $ waitForNextBlock oTestnet
       next
 
 main :: IO ()
