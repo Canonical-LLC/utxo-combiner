@@ -84,6 +84,7 @@ run Options {..} = do
 
     unless oOneShot $ do
       threadDelay $ 1_000_000 * oWaitTime
+      waitForNextBlock oTestnet
       next
 
 main :: IO ()
